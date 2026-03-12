@@ -5,6 +5,8 @@ import Login from "./pages/Login"
 import StudentDashboard from "./pages/StudentDashboard"
 import LecturerDashboard from "./pages/LecturerDashboard"
 import Signup from "./pages/Signup"
+import CreateCourse from "./pages/LecturerDashboard/CreateCourse"
+import MyCourses from "./pages/LecturerDashboard/MyCourses"
 
 function App() {
 
@@ -27,6 +29,11 @@ function App() {
           path="/lecturer"
           element={<LecturerDashboard />}
         />
+        <Route
+          path="/create-course"
+          element={<CreateCourse />}
+        />
+        <Route path="/my-courses" element={<MyCourses />} />
         <Route
           path="/signup"
           element={<Signup />}
