@@ -23,24 +23,28 @@ export default function Login(){
       let loginEmail = emailInput
 
       // check if user typed matric number (for students)
-      if(role === "student" && !emailInput.includes("@")){
+      if (role === "student" && !emailInput.includes("@")) {
+        const matric = emailInput.trim();
 
-        const { data } = await supabase
+        // match by matric number (case-insensitive) and handle special chars
+        const { data, error } = await supabase
           .from("profiles")
-          .select("id")
-          .eq("matric_no", emailInput)
-          .single()
+          .select("email")
+          .ilike("matric_no", matric)
+          .single();
 
-        if(!data){
-          alert("Matric number not found")
-          setLoading(false)
-          return
+        if (error || !data || !data.email) {
+          alert(
+            "Matric number not found or account needs to be updated. Please try logging in with your email address instead."
+          );
+          setLoading(false);
+          return;
         }
 
-        // get the auth email
-        const { data: userData } = await supabase.auth.admin.getUserById(data.id)
-
-        loginEmail = userData.user.email
+        loginEmail = data.email;
+      } else if (role === "student" && emailInput.includes("@")) {
+        // Student logging in with email - use it directly
+        loginEmail = emailInput;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -55,6 +59,22 @@ export default function Login(){
       }
 
       const user = data.user
+
+      // Update profile with email if it's missing (for migration)
+      if (role === "student") {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", user.id)
+          .single();
+
+        if (!existingProfile?.email && user.email) {
+          await supabase
+            .from("profiles")
+            .update({ email: user.email })
+            .eq("id", user.id);
+        }
+      }
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -74,7 +94,7 @@ export default function Login(){
     }
   }
 
-  return(
+  return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 py-12 px-4">
       <div className="bg-white rounded-lg shadow-md w-full max-w-md p-8">
         

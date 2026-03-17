@@ -6,6 +6,7 @@ import { FaBook, FaUsers, FaClipboardList, FaTrash, FaEllipsisV, FaEdit } from "
 export default function MyCourses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [courseStats, setCourseStats] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,12 +28,56 @@ export default function MyCourses() {
       .select("*")
       .eq("lecturer_id", user.id);
 
-    setLoading(false);
     if (error) {
       console.log(error);
-    } else {
-      setCourses(data || []);
+      setLoading(false);
+      return;
     }
+
+    setCourses(data || []);
+
+    // Fetch stats for each course
+    const stats = {};
+    for (const course of data || []) {
+      // Get session count
+      const { count: sessionCount } = await supabase
+        .from("attendance_sessions")
+        .select("*", { count: 'exact', head: true })
+        .eq("course_id", course.id);
+
+      // Get unique enrolled students (those who have marked attendance)
+      const { data: records } = await supabase
+        .from("attendance_records")
+        .select("student_id")
+        .eq("session_id", course.id); // Wait, this is wrong. Need to get sessions first.
+
+      // Better way: get all sessions for course, then get unique students from records
+      const { data: sessions } = await supabase
+        .from("attendance_sessions")
+        .select("id")
+        .eq("course_id", course.id);
+
+      let enrolledCount = 0;
+      if (sessions && sessions.length > 0) {
+        const sessionIds = sessions.map(s => s.id);
+        const { data: attendanceRecords } = await supabase
+          .from("attendance_records")
+          .select("student_id")
+          .in("session_id", sessionIds);
+
+        // Get unique student IDs
+        const uniqueStudents = new Set(attendanceRecords?.map(r => r.student_id) || []);
+        enrolledCount = uniqueStudents.size;
+      }
+
+      stats[course.id] = {
+        sessions: sessionCount || 0,
+        enrolled: enrolledCount
+      };
+    }
+
+    setCourseStats(stats);
+    setLoading(false);
   };
 
   const deleteCourse = async (courseId) => {
@@ -46,6 +91,10 @@ export default function MyCourses() {
         console.log(error);
       } else {
         setCourses(courses.filter(c => c.id !== courseId));
+        // Remove stats for deleted course
+        const newStats = { ...courseStats };
+        delete newStats[courseId];
+        setCourseStats(newStats);
       }
     }
   };
@@ -60,7 +109,7 @@ export default function MyCourses() {
           </div>
           {courses.length > 0 && (
             <button 
-              onClick={() => navigate("/lecturer/create-course")}
+              onClick={() => navigate("/create-course")}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition duration-200 flex items-center gap-2 shadow-md hover:shadow-lg whitespace-nowrap"
             >
               <span className="text-xl">+</span> Create New Course
@@ -83,7 +132,7 @@ export default function MyCourses() {
             <h3 className="text-2xl font-bold text-gray-900 mb-3">No courses yet</h3>
             <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">You haven't created any courses. Start by creating your first course to begin teaching.</p>
             <button 
-              onClick={() => navigate("/lecturer/create-course")}
+              onClick={() => navigate("/create-course")}
               className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition duration-200 shadow-md hover:shadow-lg inline-flex items-center gap-2"
             >
               <span className="text-xl">+</span> Create Your First Course
@@ -117,24 +166,24 @@ export default function MyCourses() {
               </div>
 
               {/* Course Body */}
-              <div className="p-8">
+              <div className="p-3">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-8 pb-8 border-b border-gray-200">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center hover:shadow-md transition duration-200">
-                    <FaUsers className="text-blue-600 text-2xl mx-auto mb-2" />
+                <div className="grid grid-cols-2 gap-2 mb-4 pb-2 border-b border-gray-200">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-1.5 text-center hover:shadow-md transition duration-200">
+                    <FaUsers className="text-blue-400 text-sm mx-auto mb-0.5" />
                     <p className="text-gray-700 text-xs font-semibold">Enrolled</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">0</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">{courseStats[course.id]?.enrolled || 0}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center hover:shadow-md transition duration-200">
-                    <FaClipboardList className="text-blue-600 text-2xl mx-auto mb-2" />
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-1.5 text-center hover:shadow-md transition duration-200">
+                    <FaClipboardList className="text-blue-600 text-sm mx-auto mb-0.5" />
                     <p className="text-gray-700 text-xs font-semibold">Sessions</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">0</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">{courseStats[course.id]?.sessions || 0}</p>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <button className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:scale-95 text-white rounded-lg font-semibold transition duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+                  <button onClick={() => navigate(`/start-attendance/${course.id}`)} className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:scale-95 text-white rounded-lg font-semibold transition duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
                     <FaClipboardList className="text-base" />
                     Start Attendance
                   </button>

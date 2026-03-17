@@ -25,22 +25,19 @@ export default function Landing(){
       // check if user typed matric number (for students)
       if(role === "student" && !emailInput.includes("@")){
 
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("profiles")
-          .select("id")
+          .select("email")
           .eq("matric_no", emailInput)
           .single()
 
-        if(!data){
-          alert("Matric number not found")
+        if(error || !data || !data.email){
+          alert("Matric number not found or account needs to be updated. Please contact administrator or try logging in with your email address.")
           setLoading(false)
           return
         }
 
-        // get the auth email
-        const { data: userData } = await supabase.auth.admin.getUserById(data.id)
-
-        loginEmail = userData.user.email
+        loginEmail = data.email
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({

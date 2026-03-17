@@ -53,6 +53,7 @@ export default function Signup(){
         .update({
           first_name: firstName,
           last_name: lastName,
+          email: email,
           role,
           department,
           matric_no: role === "student" ? matricNumber : null,
