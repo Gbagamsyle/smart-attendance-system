@@ -43,7 +43,8 @@ export default function Reports() {
           attendance_code,
           start_time,
           end_time,
-          course_id
+          course_id,
+          lecturer_ip
         ),
         students:student_id (
           id,
@@ -98,6 +99,7 @@ export default function Reports() {
           sessionsMap.set(sessionId, {
             session_code: record.attendance_sessions?.attendance_code,
             date: record.attendance_sessions?.start_time,
+            lecturer_ip: record.attendance_sessions?.lecturer_ip || null,
             attendees: []
           });
         }
@@ -105,17 +107,53 @@ export default function Reports() {
           name: record.students?.raw_user_meta_data?.name || record.students?.email || 'Unknown',
           email: record.students?.email,
           marked_at: record.marked_at,
-          ip_address: record.ip_address
+          ip_address: record.ip_address,
+          device_info: record.device_info || 'N/A'
         });
+      });
+
+      const sessionsWithFraud = Array.from(sessionsMap.values()).map((session) => {
+        const ipCounts = session.attendees.reduce((acc, attendee) => {
+          if (attendee.ip_address) {
+            acc[attendee.ip_address] = (acc[attendee.ip_address] || 0) + 1;
+          }
+          return acc;
+        }, {});
+
+        const attendees = session.attendees.map((attendee) => {
+          const noIp = !attendee.ip_address;
+          const mismatchWithLecturer =
+            session.lecturer_ip && attendee.ip_address && attendee.ip_address !== session.lecturer_ip;
+          const sharedIp = attendee.ip_address && ipCounts[attendee.ip_address] > 1;
+
+          return {
+            ...attendee,
+            isSuspicious: noIp || mismatchWithLecturer || sharedIp,
+            suspiciousReason: noIp
+              ? 'No IP captured'
+              : mismatchWithLecturer
+              ? 'IP differs from lecturer network'
+              : sharedIp
+              ? 'IP shared by multiple students in same session'
+              : null,
+          };
+        });
+
+        return {
+          ...session,
+          attendees,
+          suspiciousCount: attendees.filter(a => a.isSuspicious).length,
+        };
       });
 
       processedData = {
         type: 'attendance',
         course: courses.find(c => c.id === selectedCourse),
-        sessions: Array.from(sessionsMap.values()),
-        total_sessions: sessionsMap.size,
+        sessions: sessionsWithFraud,
+        total_sessions: sessionsWithFraud.length,
         total_attendance: data.length,
-        unique_students: new Set(data.map(r => r.student_id)).size
+        unique_students: new Set(data.map(r => r.student_id)).size,
+        total_suspicious: sessionsWithFraud.reduce((sum, s) => sum + s.suspiciousCount, 0)
       };
     } else if (reportType === 'student') {
       // Group by student
@@ -320,6 +358,15 @@ export default function Reports() {
                     : 'N/A'}
                 </p>
               </div>
+              {reportData.type === 'attendance' && (
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <FaChartLine className="text-red-500 text-2xl mb-2" />
+                  <p className="text-sm text-gray-600">Suspicious Flags</p>
+                  <p className="text-2xl font-bold text-red-900">
+                    {reportData.total_suspicious || 0}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Report Content */}
@@ -343,8 +390,11 @@ export default function Reports() {
                         <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                           <div>
                             <span className="font-medium text-gray-900">{attendee.name}</span>
-                            <span className="text-gray-500 ml-2">({attendee.email})</span>
-                          </div>
+                            <span className="text-gray-500 ml-2">({attendee.email})</span>                            {attendee.isSuspicious && (
+                              <span className="text-red-500 ml-2 text-xs">
+                                ⚠ {attendee.suspiciousReason}
+                              </span>
+                            )}                          </div>
                           <div className="text-sm text-gray-500">
                             {new Date(attendee.marked_at).toLocaleTimeString()}
                           </div>
