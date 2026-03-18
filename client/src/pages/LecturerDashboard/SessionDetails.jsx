@@ -108,6 +108,27 @@ export default function SessionDetails() {
 
   useEffect(() => {
     fetchRecords();
+
+    const channel = supabase
+      .channel("attendance-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "attendance_records",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          console.log("New attendance:", payload);
+          setRecords((prev) => [payload.new, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [sessionId]);
 
   const fetchRecords = async () => {
