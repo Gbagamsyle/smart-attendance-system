@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { getUserIP } from "../../utils/getIP";
 import { FaQrcode, FaCheck } from "react-icons/fa";
 import useAuth from "../../hooks/useAuth";
 
@@ -51,9 +52,8 @@ export default function JoinAttendance() {
     }
 
     // Insert record
-    const ip = await fetch("https://api.ipify.org?format=json")
-      .then((res) => res.json())
-      .then((data) => data.ip);
+    const studentIP = await getUserIP();
+    const deviceInfo = navigator.userAgent;
 
     const { error: insertError } = await supabase
       .from("attendance_records")
@@ -61,7 +61,9 @@ export default function JoinAttendance() {
         {
           session_id: session.id,
           student_id: user.id,
-          ip_address: ip,
+          ip_address: studentIP,
+          device_info: deviceInfo,
+          marked_at: new Date().toISOString(),
         },
       ]);
 

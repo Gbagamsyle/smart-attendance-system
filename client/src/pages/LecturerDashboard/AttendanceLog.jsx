@@ -7,6 +7,7 @@ export default function AttendanceLog() {
   const { sessionId } = useParams();
   const [records, setRecords] = useState([]);
   const [courseId, setCourseId] = useState("");
+  const [sessionLecturerIP, setSessionLecturerIP] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -16,12 +17,13 @@ export default function AttendanceLog() {
       // fetch session details to know the course id for back navigation
       const { data: sessionData, error: sessionError } = await supabase
         .from("attendance_sessions")
-        .select("course_id")
+        .select("course_id, lecturer_ip")
         .eq("id", sessionId)
         .single();
 
       if (!sessionError && sessionData) {
         setCourseId(sessionData.course_id);
+        setSessionLecturerIP(sessionData.lecturer_ip || "");
       }
 
       const { data, error } = await supabase
@@ -94,9 +96,23 @@ export default function AttendanceLog() {
                 {record.profiles?.matric_no || ""}
                 </p>
 
+                <p className="text-xs text-gray-500">
+                  IP: {record.ip_address || "N/A"}
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  Device: {record.device_info?.slice(0, 40) || "N/A"}...
+                </p>
+
                 <p className="text-gray-500 text-xs">
                 Marked at: {new Date(record.created_at).toLocaleString()}
                 </p>
+
+                {record.ip_address && sessionLecturerIP && record.ip_address !== sessionLecturerIP && (
+                  <span className="text-red-500 text-xs ml-2">
+                    ⚠ Different Network
+                  </span>
+                )}
                 </div>
               </div>
             ))}

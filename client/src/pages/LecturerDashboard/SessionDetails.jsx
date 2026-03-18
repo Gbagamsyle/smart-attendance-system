@@ -5,6 +5,7 @@ import { supabase } from "../../services/supabase";
 export default function SessionDetails() {
   const { sessionId } = useParams();
   const [records, setRecords] = useState([]);
+  const [sessionLecturerIP, setSessionLecturerIP] = useState("");
   const [loading, setLoading] = useState(true);
 
   const exportRows = () => {
@@ -111,6 +112,17 @@ export default function SessionDetails() {
 
   const fetchRecords = async () => {
     setLoading(true);
+
+    const { data: sessionData, error: sessionError } = await supabase
+      .from("attendance_sessions")
+      .select("lecturer_ip")
+      .eq("id", sessionId)
+      .single();
+
+    if (!sessionError && sessionData) {
+      setSessionLecturerIP(sessionData.lecturer_ip || "");
+    }
+
     const { data } = await supabase
       .from("attendance_records")
       .select(`
@@ -172,6 +184,10 @@ export default function SessionDetails() {
             {records.map((record) => {
               const studentName = record.profiles?.name || "Unknown Student";
               const matricNo = record.profiles?.matric_no || "N/A";
+              const isSuspicious =
+                record.ip_address &&
+                sessionLecturerIP &&
+                record.ip_address !== sessionLecturerIP;
 
               return (
                 <div
@@ -180,6 +196,21 @@ export default function SessionDetails() {
                 >
                   <p className="font-semibold text-gray-900">Name: {studentName}</p>
                   <p className="text-sm text-gray-600">Matric Number: {matricNo}</p>
+
+                  <p className="text-xs text-gray-500">
+                    IP: {record.ip_address || "N/A"}
+                  </p>
+
+                  <p className="text-xs text-gray-500">
+                    Device: {record.device_info?.slice(0, 40) || "N/A"}...
+                  </p>
+
+                  {isSuspicious && (
+                    <span className="text-red-500 text-xs ml-2">
+                      ⚠ Different Network
+                    </span>
+                  )}
+
                   <p className="text-xs text-gray-500">
                     {new Date(record.created_at).toLocaleString()}
                   </p>
