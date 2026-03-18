@@ -63,7 +63,6 @@ export default function JoinAttendance() {
           student_id: user.id,
           ip_address: studentIP,
           device_info: deviceInfo,
-          marked_at: new Date().toISOString(),
         },
       ]);
 

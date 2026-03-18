@@ -70,11 +70,11 @@ export default function Reports() {
       }
 
       if (startDate) {
-        query = query.gte('marked_at', startDate.toISOString());
+        query = query.gte('created_at', startDate.toISOString());
       }
     }
 
-    const { data, error } = await query.order('marked_at', { ascending: false });
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error generating report:', error);
@@ -102,7 +102,7 @@ export default function Reports() {
         sessionsMap.get(sessionId).attendees.push({
           name: record.profiles?.name || 'Unknown',
           email: record.profiles?.matric_no || 'N/A',
-          marked_at: record.marked_at,
+          marked_at: record.created_at,
           ip_address: record.ip_address,
           device_info: record.device_info || 'N/A'
         });

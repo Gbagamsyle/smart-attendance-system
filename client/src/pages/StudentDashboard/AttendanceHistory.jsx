@@ -25,7 +25,7 @@ export default function AttendanceHistory() {
           )
         `)
         .eq("student_id", user.id)
-        .order("marked_at", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) {
         setError(error.message);
@@ -88,8 +88,8 @@ export default function AttendanceHistory() {
                       {record.attendance_sessions?.courses?.name || "Unknown Course"}
                     </p>
                     <p className="text-gray-600 text-sm">
-                      Marked on {new Date(record.marked_at).toLocaleDateString()} at{" "}
-                      {new Date(record.marked_at).toLocaleTimeString()}
+                      Marked on {new Date(record.created_at).toLocaleDateString()} at{" "}
+                      {new Date(record.created_at).toLocaleTimeString()}
                     </p>
                   </div>
                 </div>
