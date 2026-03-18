@@ -46,11 +46,7 @@ export default function Reports() {
           course_id,
           lecturer_ip
         ),
-        students:student_id (
-          id,
-          email,
-          raw_user_meta_data
-        )
+        profiles (name, matric_no)
       `)
       .eq('attendance_sessions.course_id', selectedCourse);
 
@@ -104,8 +100,8 @@ export default function Reports() {
           });
         }
         sessionsMap.get(sessionId).attendees.push({
-          name: record.students?.raw_user_meta_data?.name || record.students?.email || 'Unknown',
-          email: record.students?.email,
+          name: record.profiles?.name || 'Unknown',
+          email: record.profiles?.matric_no || 'N/A',
           marked_at: record.marked_at,
           ip_address: record.ip_address,
           device_info: record.device_info || 'N/A'
@@ -161,12 +157,12 @@ export default function Reports() {
 
       data.forEach(record => {
         const studentId = record.student_id;
-        const studentName = record.students?.raw_user_meta_data?.name || record.students?.email || 'Unknown';
+        const studentName = record.profiles?.name || 'Unknown';
 
         if (!studentsMap.has(studentId)) {
           studentsMap.set(studentId, {
             name: studentName,
-            email: record.students?.email,
+            email: record.profiles?.matric_no || 'N/A',
             sessions: []
           });
         }
