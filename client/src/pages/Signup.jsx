@@ -50,16 +50,20 @@ export default function Signup(){
 
       await supabase
         .from("profiles")
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          email: email,
-          role,
-          department,
-          matric_no: role === "student" ? matricNumber : null,
-          level: role === "student" ? level : null
-        })
-        .eq("id", user.id)
+        .upsert(
+          {
+            id: user.id,
+            name: `${firstName} ${lastName}`,
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            role: role,
+            department: department,
+            matric_no: role === "student" ? matricNumber : null,
+            level: role === "student" ? level : null
+          },
+          { onConflict: "id" }
+        )
 
       alert("Account created successfully!")
       navigate("/login")
