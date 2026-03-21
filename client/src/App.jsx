@@ -14,6 +14,7 @@ import AttendanceHistory from "./pages/StudentDashboard/AttendanceHistory"
 import StudentProfile from "./pages/StudentDashboard/StudentProfile"
 import StudentSettings from "./pages/StudentDashboard/StudentSettings"
 import AttendanceRecords from "./pages/LecturerDashboard/AttendanceRecords"
+import SessionDetails from "./pages/LecturerDashboard/SessionDetails"
 import Reports from "./pages/LecturerDashboard/Reports"
 import LecturerSettings from "./pages/LecturerDashboard/LecturerSettings"
 
@@ -52,6 +53,7 @@ function App() {
         <Route path="/attendance-log/:sessionId" element={<AttendanceLog />} />
         <Route path="/lecturer-dashboard" element={<Navigate to="/lecturer" />} />
         <Route path="/attendance-records" element={<AttendanceRecords />} />
+        <Route path="/attendance-session/:sessionId" element={<SessionDetails />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/lecturer-settings" element={<LecturerSettings />} />
         <Route
